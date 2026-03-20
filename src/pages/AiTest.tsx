@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sparkles, Send, Loader2, Bot, User, FileText, Image as ImageIcon, Upload, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Send, Loader2, Bot, FileText, Upload, CheckCircle2, X } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
