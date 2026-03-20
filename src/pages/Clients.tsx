@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MOCK_DATA } from '../data';
-import { Plus, Users, X, Save } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Plus, Users, X, Save, Loader2 } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -11,26 +11,43 @@ interface Client {
 
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', type: 'Restaurant', contact: '' });
 
-  // Cargar datos
-  useEffect(() => {
-    const saved = localStorage.getItem('crm_clients');
-    if (saved) {
-      setClients(JSON.parse(saved));
+  // Cargar datos de Supabase
+  const fetchClients = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching clients:', error);
     } else {
-      setClients(MOCK_DATA.clients);
+      setClients(data || []);
     }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchClients();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = [...clients, { ...newClient, id: Date.now().toString() }];
-    setClients(updated);
-    localStorage.setItem('crm_clients', JSON.stringify(updated));
-    setIsModalOpen(false);
-    setNewClient({ name: '', type: 'Restaurant', contact: '' });
+    const { error } = await supabase
+      .from('clients')
+      .insert([newClient]);
+
+    if (error) {
+      alert('Error guardando cliente: ' + error.message);
+    } else {
+      setIsModalOpen(false);
+      setNewClient({ name: '', type: 'Restaurant', contact: '' });
+      fetchClients();
+    }
   };
 
   return (
@@ -50,29 +67,40 @@ export default function Clients() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {clients.map(p => (
-          <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <div style={{ padding: '1rem', backgroundColor: 'var(--bg-dark)', borderRadius: '50%', color: 'var(--accent-neon)' }}>
-                 <Users size={24} />
-               </div>
-               <div>
-                 <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{p.name}</h3>
-                 <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.type.toUpperCase()}</span>
-               </div>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
+          <Loader2 className="animate-spin" size={48} color="var(--accent-neon)" />
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          {clients.length === 0 && (
+            <div className="card" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+              No hay clientes registrados aún. ¡Crea el primero!
             </div>
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              <strong>Contacto:</strong> {p.contact || 'No especificado'}
+          )}
+          {clients.map(p => (
+            <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                 <div style={{ padding: '1rem', backgroundColor: 'var(--bg-dark)', borderRadius: '50%', color: 'var(--accent-neon)' }}>
+                   <Users size={24} />
+                 </div>
+                 <div>
+                   <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{p.name}</h3>
+                   <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.type.toUpperCase()}</span>
+                 </div>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                <strong>Contacto:</strong> {p.contact || 'No especificado'}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                <button className="btn-outline" style={{ flex: 1, padding: '0.5rem', fontSize: '0.875rem' }}>Editar</button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-              <button className="btn-outline" style={{ flex: 1, padding: '0.5rem', fontSize: '0.875rem' }}>Editar</button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Modal */}
+      {/* Modal ... (mismo código) ... */}
       {isModalOpen && (
         <div style={{
           position: 'fixed',
