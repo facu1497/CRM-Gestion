@@ -31,8 +31,8 @@ export default function Layout() {
     { name: 'Propuestas', icon: Briefcase, path: '/proposals' },
     { name: 'Clientes', icon: Users, path: '/clients' },
     { name: 'Influencers', icon: UserSquare2, path: '/influencers' },
-    { path: '/providers', icon: Camera, label: 'Proveedores' },
-    { path: '/ai-test', icon: Sparkles, label: 'Prueba IA' },
+    { name: 'Proveedores', icon: Camera, path: '/providers' },
+    { name: 'Prueba IA', icon: Sparkles, path: '/ai-test' },
   ];
 
   return (
