@@ -69,9 +69,14 @@ export default function Proposals() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '2.5rem', margin: 0 }}>PROPUESTAS</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Gestión de acciones e intermediación</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-dark)', borderRadius: '8px', color: 'var(--accent-neon)' }}>
+            <Briefcase size={32} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '2.5rem', margin: 0 }}>PROPUESTAS</h2>
+            <p style={{ color: 'var(--text-muted)' }}>Gestión de acciones e intermediación</p>
+          </div>
         </div>
         <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Plus size={20} />
