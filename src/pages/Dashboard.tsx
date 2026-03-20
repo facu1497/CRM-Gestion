@@ -1,11 +1,30 @@
+import { useState, useEffect } from 'react';
 import { Users, DollarSign, Activity, FileText } from 'lucide-react';
 import { MOCK_DATA } from '../data';
 
 export default function Dashboard() {
-  const totalBudget = MOCK_DATA.proposals.reduce((sum, p) => sum + p.budget, 0);
-  const totalCommission = MOCK_DATA.proposals.reduce((sum, p) => sum + (p.budget * p.commission_rate), 0);
+  const [data, setData] = useState({
+    clients: MOCK_DATA.clients,
+    influencers: MOCK_DATA.influencers,
+    proposals: MOCK_DATA.proposals
+  });
+
+  useEffect(() => {
+    const savedClients = localStorage.getItem('crm_clients');
+    const savedInfluencers = localStorage.getItem('crm_influencers');
+    const savedProposals = localStorage.getItem('crm_proposals');
+
+    setData({
+      clients: savedClients ? JSON.parse(savedClients) : MOCK_DATA.clients,
+      influencers: savedInfluencers ? JSON.parse(savedInfluencers) : MOCK_DATA.influencers,
+      proposals: savedProposals ? JSON.parse(savedProposals) : MOCK_DATA.proposals
+    });
+  }, []);
+
+  const totalBudget = data.proposals.reduce((sum, p) => sum + p.budget, 0);
+  const totalCommission = data.proposals.reduce((sum, p) => sum + (p.budget * (p.commission_rate || 0.15)), 0);
   
-  const activeProposals = MOCK_DATA.proposals.filter(p => p.status === 'En curso').length;
+  const activeProposals = data.proposals.filter(p => p.status === 'En curso').length;
 
   return (
     <div>
@@ -44,7 +63,7 @@ export default function Dashboard() {
             </div>
             <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-muted)' }}>Influencers</h3>
           </div>
-          <p style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>{MOCK_DATA.influencers.length}</p>
+          <p style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>{data.influencers.length}</p>
         </div>
 
         <div className="card">
@@ -72,12 +91,12 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_DATA.proposals.map((p, i) => {
-                const client = MOCK_DATA.clients.find(c => c.id === p.client_id);
+              {data.proposals.slice(0, 5).map((p, i) => {
+                const client = data.clients.find(c => c.id === p.client_id);
                 return (
                   <tr key={p.id} style={{ borderTop: i !== 0 ? '1px solid var(--border-color)' : 'none' }}>
                     <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>{p.title}</td>
-                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)' }}>{client?.name}</td>
+                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)' }}>{client?.name || 'Cliente Desconocido'}</td>
                     <td style={{ padding: '1rem 1.5rem' }}>
                       <span style={{ 
                         padding: '0.25rem 0.75rem', 
@@ -91,7 +110,7 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="mono" style={{ padding: '1rem 1.5rem' }}>${p.budget.toLocaleString()}</td>
-                    <td className="mono" style={{ padding: '1rem 1.5rem', color: 'var(--accent-neon)' }}>${(p.budget * p.commission_rate).toLocaleString()}</td>
+                    <td className="mono" style={{ padding: '1rem 1.5rem', color: 'var(--accent-neon)' }}>${(p.budget * (p.commission_rate || 0.15)).toLocaleString()}</td>
                   </tr>
                 );
               })}
