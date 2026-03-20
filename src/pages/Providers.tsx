@@ -40,7 +40,7 @@ export default function Providers() {
           <p style={{ color: 'var(--text-muted)' }}>Realizadores y creadores de contenido</p>
         </div>
         <button 
-          onClick={() => setIsOpen ? setIsModalOpen(true) : setIsModalOpen(true)} 
+          onClick={() => setIsModalOpen(true)} 
           className="btn-primary" 
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
