@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MOCK_DATA } from '../data';
-import { Plus, X, Save, Briefcase } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Plus, X, Save, Briefcase, Loader2 } from 'lucide-react';
 
 interface Proposal {
   id: string;
@@ -16,9 +16,10 @@ interface Proposal {
 
 export default function Proposals() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [clients, setClients] = useState(MOCK_DATA.clients);
-  const [influencers, setInfluencers] = useState(MOCK_DATA.influencers);
-  const [providers, setProviders] = useState(MOCK_DATA.providers);
+  const [clients, setClients] = useState<any[]>([]);
+  const [influencers, setInfluencers] = useState<any[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProposal, setNewProposal] = useState({
@@ -30,40 +31,54 @@ export default function Proposals() {
     status: 'Pendiente'
   });
 
-  // Cargar todos los datos para las relaciones
-  useEffect(() => {
-    const savedP = localStorage.getItem('crm_proposals');
-    const savedC = localStorage.getItem('crm_clients');
-    const savedI = localStorage.getItem('crm_influencers');
-    const savedPr = localStorage.getItem('crm_providers');
-
-    if (savedP) setProposals(JSON.parse(savedP));
-    else setProposals(MOCK_DATA.proposals);
-
-    if (savedC) setClients(JSON.parse(savedC));
-    if (savedI) setInfluencers(JSON.parse(savedI));
-    if (savedPr) setProviders(JSON.parse(savedPr));
+  const fetchData = async () => {
+    setLoading(true);
     
-    // Set default client if available
-    const initialClients = savedC ? JSON.parse(savedC) : MOCK_DATA.clients;
-    if (initialClients.length > 0) {
-      setNewProposal(prev => ({ ...prev, client_id: initialClients[0].id }));
+    // Fetch all related data in parallel
+    const [pRes, cRes, iRes, prRes] = await Promise.all([
+      supabase.from('proposals').select('*').order('date', { ascending: false }),
+      supabase.from('clients').select('*'),
+      supabase.from('influencers').select('*'),
+      supabase.from('providers').select('*')
+    ]);
+
+    if (pRes.data) setProposals(pRes.data);
+    if (cRes.data) setClients(cRes.data);
+    if (iRes.data) setInfluencers(iRes.data);
+    if (prRes.data) setProviders(prRes.data);
+
+    // Default client for modal
+    if (cRes.data && cRes.data.length > 0 && !newProposal.client_id) {
+       setNewProposal(prev => ({ ...prev, client_id: cRes.data[0].id }));
     }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const proposal: Proposal = {
+    
+    // Clean up empty UUIDs
+    const payload = {
       ...newProposal,
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      commission_rate: 0.15 // Default 15%
+      influencer_id: newProposal.influencer_id || null,
+      provider_id: newProposal.provider_id || null,
+      commission_rate: 0.15
     };
-    const updated = [proposal, ...proposals];
-    setProposals(updated);
-    localStorage.setItem('crm_proposals', JSON.stringify(updated));
-    setIsModalOpen(false);
-    setNewProposal({ title: '', client_id: clients[0]?.id || '', influencer_id: '', provider_id: '', budget: 0, status: 'Pendiente' });
+
+    const { error } = await supabase.from('proposals').insert([payload]);
+
+    if (error) {
+      alert('Error: ' + error.message);
+    } else {
+      setIsModalOpen(false);
+      setNewProposal({ title: '', client_id: clients[0]?.id || '', influencer_id: '', provider_id: '', budget: 0, status: 'Pendiente' });
+      fetchData();
+    }
   };
 
   return (
@@ -84,60 +99,71 @@ export default function Proposals() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gap: '1.5rem' }}>
-        {proposals.map((p) => {
-          const client = clients.find(c => c.id === p.client_id);
-          const influencer = influencers.find(i => i.id === p.influencer_id);
-          const provider = providers.find(pr => pr.id === p.provider_id);
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
+          <Loader2 className="animate-spin" size={48} color="var(--accent-neon)" />
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
+          {proposals.length === 0 && (
+            <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+              No hay propuestas activas. Crea una para comenzar a triangular.
+            </div>
+          )}
+          {proposals.map((p) => {
+            const client = clients.find(c => c.id === p.client_id);
+            const influencer = influencers.find(i => i.id === p.influencer_id);
+            const provider = providers.find(pr => pr.id === p.provider_id);
 
-          return (
-            <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>{p.title}</h3>
-                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem', flexWrap: 'wrap' }}>
-                    <span>Fecha: {p.date}</span>
-                    <span>•</span>
-                    <span>Monto Total: <strong className="mono" style={{color: 'var(--text-main)'}}>${p.budget.toLocaleString()}</strong></span>
-                    <span>•</span>
-                    <span className="neon-text">Comisión: <strong className="mono">${(p.budget * (p.commission_rate || 0.15)).toLocaleString()}</strong></span>
+            return (
+              <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>{p.title}</h3>
+                    <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem', flexWrap: 'wrap' }}>
+                      <span>Fecha: {p.date}</span>
+                      <span>•</span>
+                      <span>Monto Total: <strong className="mono" style={{color: 'var(--text-main)'}}>${p.budget.toLocaleString()}</strong></span>
+                      <span>•</span>
+                      <span className="neon-text">Comisión: <strong className="mono">${(p.budget * (p.commission_rate || 0.15)).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+                  <span style={{ 
+                          padding: '0.25rem 0.75rem', 
+                          borderRadius: '999px', 
+                          fontSize: '0.875rem',
+                          backgroundColor: p.status === 'En curso' ? 'rgba(227, 255, 0, 0.1)' : p.status === 'Finalizado' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                          color: p.status === 'En curso' ? 'var(--accent-neon)' : 'var(--text-muted)',
+                          border: p.status === 'Pendiente' ? '1px solid var(--border-color)' : 'none'
+                        }}>
+                    {p.status}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: 'var(--bg-dark)', padding: '1rem', borderRadius: '4px' }}>
+                  <div>
+                    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>CLIENTE</div>
+                    <div style={{ fontWeight: 500 }}>{client?.name || 'No encontrado'}</div>
+                  </div>
+                  <div>
+                    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>INFLUENCER ASIGNADO</div>
+                    <div style={{ fontWeight: 500 }}>{influencer ? influencer.name : 'No asignado'}</div>
+                  </div>
+                  <div>
+                    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>PROVEEDOR CONTENIDO</div>
+                    <div style={{ fontWeight: 500 }}>{provider ? provider.name : 'No asignado'}</div>
                   </div>
                 </div>
-                <span style={{ 
-                        padding: '0.25rem 0.75rem', 
-                        borderRadius: '999px', 
-                        fontSize: '0.875rem',
-                        backgroundColor: p.status === 'En curso' ? 'rgba(227, 255, 0, 0.1)' : p.status === 'Finalizado' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                        color: p.status === 'En curso' ? 'var(--accent-neon)' : 'var(--text-muted)',
-                        border: p.status === 'Pendiente' ? '1px solid var(--border-color)' : 'none'
-                      }}>
-                  {p.status}
-                </span>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: 'var(--bg-dark)', padding: '1rem', borderRadius: '4px' }}>
-                <div>
-                  <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>CLIENTE</div>
-                  <div style={{ fontWeight: 500 }}>{client?.name || 'No encontrado'}</div>
-                </div>
-                <div>
-                  <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>INFLUENCER ASIGNADO</div>
-                  <div style={{ fontWeight: 500 }}>{influencer ? influencer.name : 'No asignado'}</div>
-                </div>
-                <div>
-                  <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>PROVEEDOR CONTENIDO</div>
-                  <div style={{ fontWeight: 500 }}>{provider ? provider.name : 'No asignado'}</div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button className="btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>Editar</button>
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                <button className="btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>Editar</button>
-                <button className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>Ver Detalle</button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Modal ... */}
 
       {/* Modal */}
       {isModalOpen && (
