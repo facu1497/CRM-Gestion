@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, UserSquare2, Briefcase, Camera, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, UserSquare2, Camera, Menu, X, Sparkles } from 'lucide-react';
 
 export default function Layout() {
   const [isOpen, setIsOpen] = useState(window.innerWidth > 1024);
@@ -31,7 +31,8 @@ export default function Layout() {
     { name: 'Propuestas', icon: Briefcase, path: '/proposals' },
     { name: 'Clientes', icon: Users, path: '/clients' },
     { name: 'Influencers', icon: UserSquare2, path: '/influencers' },
-    { name: 'Proveedores', icon: Camera, path: '/providers' },
+    { path: '/providers', icon: Camera, label: 'Proveedores' },
+    { path: '/ai-test', icon: Sparkles, label: 'Prueba IA' },
   ];
 
   return (

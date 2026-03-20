@@ -5,10 +5,11 @@ import Proposals from './pages/Proposals';
 import Clients from './pages/Clients';
 import Influencers from './pages/Influencers';
 import Providers from './pages/Providers';
+import AiTest from './pages/AiTest';
 
 function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename="/CRM-Gestion">
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
@@ -16,6 +17,7 @@ function App() {
           <Route path="clients" element={<Clients />} />
           <Route path="influencers" element={<Influencers />} />
           <Route path="providers" element={<Providers />} />
+          <Route path="ai-test" element={<AiTest />} />
         </Route>
       </Routes>
     </BrowserRouter>
