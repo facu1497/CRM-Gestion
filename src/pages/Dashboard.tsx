@@ -24,9 +24,9 @@ export default function Dashboard() {
 
       if (pRes.data) {
         const proposals = pRes.data;
-        const totalBudget = proposals.reduce((sum, p) => sum + Number(p.budget), 0);
-        const totalCommission = proposals.reduce((sum, p) => sum + (Number(p.budget) * (Number(p.commission_rate) || 0.15)), 0);
-        const activeProposals = proposals.filter(p => p.status === 'En curso').length;
+        const totalBudget = proposals.reduce((sum: number, p: any) => sum + Number(p.budget), 0);
+        const totalCommission = proposals.reduce((sum: number, p: any) => sum + (Number(p.budget) * (Number(p.commission_rate) || 0.15)), 0);
+        const activeProposals = proposals.filter((p: any) => p.status === 'En curso').length;
         const recentProposals = proposals.slice(0, 5);
 
         setStats({
